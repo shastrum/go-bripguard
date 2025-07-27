@@ -1,6 +1,6 @@
 # go-bripguard
 
-**go-bripguard** is a lightweight, plug-and-play Go library for browser-based request validation with IP consistency enforcement. It issues a multi-step JavaScript token challenge to the client and verifies the final token to ensure that requests come from a real browser and not from rotating IP bots or headless automation.
+**go-bripguard** is a plug-and-play Go library for IP-bound, multi-part browser token validation. Ideal for anti-bot, anti-scraping, and headless browser detection — without CAPTCHAs.
 
 ---
 
@@ -10,8 +10,6 @@
 * ✅ JS-based challenge encoded as base64 for easy injection
 * ✅ Token-IP binding for rotation detection
 * ✅ Middleware setup for selected paths
-* ✅ Optional use of functional APIs for custom integration
-* ✅ Separate token provider middleware for flexible setups
 * ✅ No third-party CAPTCHA or external dependency
 
 ---
@@ -45,10 +43,10 @@ func main() {
         NumTokens:         3,               // default 3
         OrderSecret:       "ygfvTFUY#@Trvt6udvg8u9p8y2./,><h1ij9-n`7890",
         EncryptionKey:     <>, // RSA Public key
-        EncryptionKey:     <>, // RSA private key
+        DecryptionKey:     <>, // RSA private key
         Store:             bripguard.MemoryStore(10*time.Minute),
     })
-
+    
     // Use GuardOn middleware to enable protection for selected routes
     http.Handle("/", guard.GuardOn([]string{"/login","/checkout","/pay"}))
 
@@ -109,7 +107,7 @@ You can provide your own storage backend by implementing the `Store` interface:
 ```go
 type Store interface {
     SetToken(tokenID string, value string, ttl time.Duration) error
-	GetAndDelete(key string) (string, error)
+    GetAndDelete(key string) (string, error)
 }
 ```
 
@@ -126,6 +124,80 @@ type Store interface {
 6. If valid, request is allowed to continue., else the `bripguard` issues a new challenge url
 
 ---
+
+
+## 🧠 JS Challenge Script Template
+
+This is the minimal JavaScript used to execute the token challenge in the browser.
+
+```js
+(async () => {
+  await new Promise(resolve => setTimeout(resolve, @delay));
+
+  console.log(await [@urls].reduce(async (p, v) => {
+    const acc = await p;
+    if (v[0] === "+") {
+      // Final token submit URL (prefixed with '+')
+      const finalUrl = v.slice(1) + encodeURIComponent(acc.join("|"));
+      return fetch(finalUrl, {
+        headers: {}
+      }).then(res => res.text());
+    }
+
+    // Intermediate token URL
+    const df = await fetch(v, {
+      headers: {}
+    }).then(res => res.text());
+
+    return [...acc, df];
+  }, Promise.resolve([])));
+})();
+
+```
+
+---
+
+## 🖼️ Frontend Integration Guide (Script Injection & Challenge Handling)
+
+```js
+
+const BASE_CHALLENGE_ORIGIN = "https://yourdomain.com"; // Hardcoded trusted origin
+
+async function guardedFetch(input, init) {
+  let res = await fetch(input, init);
+
+  if (res.status === 423) {
+    const body = await res.json();
+    if (body.challenge) {
+      const challengePath = body.challenge;
+
+      await new Promise(resolve => {
+        const script = document.createElement("script");
+        script.src = BASE_CHALLENGE_ORIGIN + challengePath;
+        script.onload = () => setTimeout(resolve, 500);
+        document.body.appendChild(script);
+      });
+
+      // Retry the original request after challenge
+      return await fetch(input, init);
+    }
+  }
+
+  return res;
+}
+
+// Example usage
+guardedFetch("/checkout", { method: "POST" })
+  .then(res => res.json())
+  .then(data => console.log("Checkout success:", data))
+  .catch(err => console.error("Checkout failed:", err));
+
+
+```
+
+---
+
+
 
 ## 🚀 Coming Soon
 
