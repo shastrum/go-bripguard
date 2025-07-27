@@ -88,7 +88,7 @@ func (g *BripGuard) VerifyToken(tokenStr string, r *http.Request) (bool, error) 
 	}
 
 	finalParts := []string{}
-	for _ = range g.cfg.NumTokens {
+	for i:=0; i<g.cfg.NumTokens; i++ {
 		finalParts = append(finalParts, "")
 	}
 

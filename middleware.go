@@ -66,6 +66,19 @@ func (g *BripGuard) GuardOn(paths []string) func(http.Handler) http.Handler {
 	}
 }
 
+func (g *BripGuard) setCookie(token string, w http.ResponseWriter) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     g.cfg.FinalTokenName,
+		Value:    token,
+		HttpOnly: true,
+		MaxAge:   int(g.cfg.FinalTokenTTL.Seconds()),
+		Expires:  time.Now().UTC().Add(g.cfg.FinalTokenTTL),
+		SameSite: http.SameSiteNoneMode,
+		Path:     "/",
+		Secure:   true,
+	})
+}
+
 func (g *BripGuard) putSession(w http.ResponseWriter, delayInMs int) {
 	if sessionId, err := g.CreateSession(delayInMs); err == nil {
 		str := "{\"challenge\":\"" + g.cfg.BripPath + releasePath + sessionId + "\"}"
