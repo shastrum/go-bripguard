@@ -1,7 +1,9 @@
 # go-bripguard
 
 **go-bripguard** is a plug-and-play Go library for IP-bound, multi-part browser token validation. Ideal for anti-bot, anti-scraping, and headless browser detection — without CAPTCHAs.
-
+<br>
+<i>Inspired by the thoughts in this research paper : Mitigating DDOS Attacks from IP-Rotating Bots Using Token-BasedAccess Control
+https://ijrpr.com/uploads/V5ISSUE10/IJRPR33882.pdf </i>
 ---
 
 ## ✨ Features
